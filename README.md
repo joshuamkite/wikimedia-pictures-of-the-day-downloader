@@ -2,7 +2,7 @@
 
 A Python script that downloads all Pictures of the Day from Wikimedia Commons for a specified year page. The script automatically creates a year-based directory and downloads full-resolution images while preserving their original filenames.
 
-**N.B.** It is common for pages to be limited to 200 images. You may need to go to 'next page' to get a second URL to get all images for the year
+**N.B.** It is common for pages to be limited to 200 images. You may need to go to 'next page' to get a second URL to get all images for the year.
 
 ## Features
 
