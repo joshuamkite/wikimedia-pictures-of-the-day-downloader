@@ -28,6 +28,12 @@ def download_pictures_of_the_day(category_url):
     Args:
         category_url (str): URL of the Pictures of the Day category page for a specific year
     """
+    # Create a session to maintain cookies and headers
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    })
+
     # Extract year from URL
     year_match = re.search(r'\((\d{4})\)', category_url)
     if not year_match:
@@ -42,7 +48,8 @@ def download_pictures_of_the_day(category_url):
 
     # Get the page content
     print(f"Fetching images for year {year}...")
-    response = requests.get(category_url)
+    response = session.get(category_url)
+
     soup = BeautifulSoup(response.content, 'html.parser')
 
     # Find all gallery items
@@ -62,12 +69,14 @@ def download_pictures_of_the_day(category_url):
             file_page_url = urljoin('https://commons.wikimedia.org', file_link['href'])
 
             # Get the file page
-            file_page = requests.get(file_page_url)
+            file_page = session.get(file_page_url)
+
             file_soup = BeautifulSoup(file_page.content, 'html.parser')
 
             # Find the original file link
-            original_file_div = file_soup.find('div', class_='fullMedia')
+            original_file_div = file_soup.find('div', class_='fullImageLink')
             if not original_file_div:
+                print(f"Couldn't find full image link on page: {file_page_url}")
                 continue
 
             original_link = original_file_div.find('a')
@@ -88,11 +97,25 @@ def download_pictures_of_the_day(category_url):
 
             # Download the image
             print(f"Downloading {filename}...")
-            image_response = requests.get(image_url)
+            image_response = session.get(image_url, stream=True)
+
+            # Check if we got an actual image
+            content_type = image_response.headers.get('content-type', '')
+            if not content_type.startswith('image/'):
+                print(f"Error: Received non-image content ({content_type}) for {filename}")
+                continue
+
+            # Get the content length if available
+            content_length = image_response.headers.get('content-length')
+            if content_length and int(content_length) < 10000:  # Less than 10KB
+                print(f"Warning: File size too small for {filename} ({content_length} bytes)")
+                continue
 
             # Save the image
             with open(filepath, 'wb') as f:
-                f.write(image_response.content)
+                for chunk in image_response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
 
             print(f"Successfully downloaded {filename}")
 
